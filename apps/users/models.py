@@ -8,18 +8,19 @@ from django.conf import settings
 # CUSTOM USER (prebuilt User + role)
 # ======================================
 class CustomUser(AbstractUser):
-    """
-    Extends Django's AbstractUser.
-    Fields from SQL users table:
-    - id, email, password, first_name, last_name, is_active, created_at (date_joined)
-    Additional:
-    - role (customer/admin)
-    """
+
+    # - id, email, password, first_name, last_name, is_active, created_at (date_joined)
+
     ROLE_CHOICES = [
         ('customer', 'Customer'),
         ('admin', 'Admin'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='customer')
+
+    def save(self, *args, **kwargs):
+        if self.is_superuser:
+            self.role = "admin"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.email

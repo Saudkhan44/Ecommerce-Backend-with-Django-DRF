@@ -6,7 +6,6 @@ from .serializers import ProductSerializer, CategorySerializer, ProductImageSeri
 from .permissions import IsManagerOrReadOnly
 from .filters import ProductFilter
 
-
 class CategoryListCreateAPIView(generics.ListCreateAPIView):
 
     queryset = Category.objects.all()

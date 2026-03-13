@@ -32,10 +32,11 @@ class Product(models.Model):
     stock = models.IntegerField(default=0)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
     created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
+
 
     class Meta:
         indexes = [
@@ -56,6 +57,12 @@ class ProductImage(models.Model):
     image = models.ImageField(upload_to='products/')
     is_primary = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
+
+    def save(self, *args, **kwargs):
+        if self.is_primary:
+            # Make all other images for this product non-primary
+            ProductImage.objects.filter(product=self.product, is_primary=True).update(is_primary=False)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Image for {self.product.name}"

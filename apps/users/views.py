@@ -35,18 +35,9 @@ class ProfileAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        profile = getattr(user, 'profile', None)
-        return Response({
-            "username": user.username,
-            "email": user.email,
-            "role": user.role,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "profile_image": request.build_absolute_uri(profile.profile_image.url) if profile and profile.profile_image else None,
-            "phone_number": profile.phone_number if profile else None,
-            "address": profile.address if profile else None,
-        })
+        profile = request.user.profile
+        serializer = UserProfileSerializer(profile, context={"request": request})
+        return Response(serializer.data)
 
     def put(self, request):
         user = request.user
