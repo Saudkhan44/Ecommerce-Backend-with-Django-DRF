@@ -94,7 +94,7 @@ ASGI_APPLICATION = 'config.asgi.application'
 # Use Neon URL if it exists, otherwise use local Postgres/SQLite
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
+        default=os.environ.get('postgresql://neondb_owner:npg_qA8xJDGBCF6v@ep-jolly-star-a1r8ae3f-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'),
         conn_max_age=600,
         ssl_require=True
     )
