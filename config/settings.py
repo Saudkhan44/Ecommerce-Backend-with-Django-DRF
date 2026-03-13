@@ -1,30 +1,29 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+import dj_database_url
 from dotenv import load_dotenv
-import os
-import dj_database_url # Make sure this is in requirements.txt
-# -----------------------
-# Load environment variables from .env
-# -----------------------
-load_dotenv()  # This reads the .env file at runtime
 
-# -----------------------
-# Base directory
-# -----------------------
+# ---------------------------------------
+# Load environment variables
+# ---------------------------------------
+load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# -----------------------
-# Security settings
-# -----------------------
-# All secrets are read from .env — nothing hardcoded
-SECRET_KEY = os.getenv("SECRET_KEY")
-DEBUG = os.getenv("DEBUG", "True") == "True"
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")  # Example: localhost,127.0.0.1
+# ---------------------------------------
+# SECURITY
+# ---------------------------------------
+SECRET_KEY = os.environ.get("SECRET_KEY")
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 
-# -----------------------
-# Installed apps
-# -----------------------
+ALLOWED_HOSTS = os.environ.get(
+    "ALLOWED_HOSTS", "127.0.0.1,localhost,.onrender.com"
+).split(",")
+
+# ---------------------------------------
+# Applications
+# ---------------------------------------
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -32,16 +31,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "django_cleanup.apps.CleanupConfig",
 
-    # Third-party
+    # Third-party apps
+    "django_cleanup.apps.CleanupConfig",
     'rest_framework',
     'rest_framework.authtoken',
     'django_filters',
     'corsheaders',
     'drf_yasg',
 
-    # Local apps
+    # Project apps
     'apps.users',
     'apps.products',
     'apps.cart',
@@ -49,12 +48,13 @@ INSTALLED_APPS = [
     'core',
 ]
 
-# -----------------------
+# ---------------------------------------
 # Middleware
-# -----------------------
+# ---------------------------------------
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # Must be top
+    'corsheaders.middleware.CorsMiddleware',  # Must be first
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # For static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -63,83 +63,88 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# -----------------------
-# URL configuration
-# -----------------------
 ROOT_URLCONF = 'config.urls'
-
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
-
 WSGI_APPLICATION = 'config.wsgi.application'
-ASGI_APPLICATION = 'config.asgi.application'
 
-# -----------------------
-# Database configuration
-# -----------------------
-
-
-# Use Neon URL if it exists, otherwise use local Postgres/SQLite
+# ---------------------------------------
+# Database
+# ---------------------------------------
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('postgresql://neondb_owner:npg_qA8xJDGBCF6v@ep-jolly-star-a1r8ae3f-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'),
+        default=os.environ.get('DATABASE_URL'),
         conn_max_age=600,
         ssl_require=True
     )
 }
 
-# -----------------------
+# ---------------------------------------
 # Password validation
-# -----------------------
+# ---------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
 ]
 
-# -----------------------
+# ---------------------------------------
 # Internationalization
-# -----------------------
+# ---------------------------------------
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
+USE_L10N = True
 USE_TZ = True
 
-# -----------------------
-# Static & Media files
-# -----------------------
+# ---------------------------------------
+# Static files (WhiteNoise)
+# ---------------------------------------
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
+# ---------------------------------------
+# Media files (optional: use S3 for production)
+# ---------------------------------------
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# -----------------------
-# Default auto field
-# -----------------------
+# ---------------------------------------
+# CORS
+# ---------------------------------------
+CORS_ALLOW_ALL_ORIGINS = True  # For production, restrict to your frontend domains
+
+# ---------------------------------------
+# Email
+# ---------------------------------------
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("EMAIL_HOST")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get("EMAIL_USER")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_PASSWORD")
+
+# ---------------------------------------
+# Auth & Custom User
+# ---------------------------------------
+AUTH_USER_MODEL = "users.CustomUser"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# -----------------------
-# Custom User model
-# -----------------------
-AUTH_USER_MODEL = "users.CustomUser"
-
-# -----------------------
-# Django REST framework
-# -----------------------
+# ---------------------------------------
+# REST Framework + JWT
+# ---------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -152,29 +157,39 @@ REST_FRAMEWORK = {
     ),
 }
 
-# -----------------------
-# JWT settings
-# -----------------------
+# JWT token settings
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=2400),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS": False,
-    "BLACKLIST_AFTER_ROTATION": True,
-    "AUTH_HEADER_TYPES": ("Bearer",),
+    'ACCESS_TOKEN_LIFETIME': timedelta(
+        minutes=int(os.environ.get("ACCESS_TOKEN_LIFETIME_MINUTES", 60))
+    ),
+    'REFRESH_TOKEN_LIFETIME': timedelta(
+        days=int(os.environ.get("REFRESH_TOKEN_LIFETIME_DAYS", 1))
+    ),
 }
 
-# -----------------------
-# CORS settings
-# -----------------------
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only allow all in dev
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+# ---------------------------------------
+# Security (production-ready)
+# ---------------------------------------
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_HSTS_SECONDS = 3600
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
 
-# -----------------------
-# Email settings
-# -----------------------
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.getenv("EMAIL_HOST")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv("EMAIL_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASSWORD")
+# ---------------------------------------
+# Logging (console for Render)
+# ---------------------------------------
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
